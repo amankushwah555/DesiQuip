@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,14 @@ class FileJobStore:
         if not d.is_dir():
             raise FileNotFoundError(f"Job folder not found: {d}")
         return d
+
+    def create(self, job_id: str, template: Path) -> Path:
+        """New job folder (creating jobs/ if needed), seeded with the template's files."""
+        dest = self.root / job_id
+        if dest.exists():
+            raise FileExistsError(f"Job already exists: {dest}")
+        shutil.copytree(template, dest)
+        return dest
 
     def read_json(self, job_id: str, name: str) -> Any:
         with open(self.path(job_id) / name, encoding="utf-8") as f:

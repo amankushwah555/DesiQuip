@@ -91,6 +91,6 @@ if ($LASTEXITCODE -ne 0) { throw "Unit tests failed - see output above." }
 Ok "All unit tests pass"
 
 Write-Host "`nSetup complete. Make the demo Short (about 1-4 min on the GPU laptop):" -ForegroundColor Green
-Write-Host "    Copy-Item -Recurse examples\demo-001 jobs\"
+Write-Host "    .\.venv\Scripts\python -m desiquip new demo-001"
 Write-Host "    .\.venv\Scripts\python -m desiquip make demo-001"
 Write-Host "    -> jobs\demo-001\final.mp4"

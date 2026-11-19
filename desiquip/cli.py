@@ -52,6 +52,9 @@ def main(argv: list[str] | None = None) -> int:
     for step in STEPS:
         sub.add_parser(step).add_argument("job_id")
     sub.add_parser("auth", help="one-time YouTube OAuth; saves secrets/token.json")
+    nw = sub.add_parser("new", help="create jobs/<job_id>/ from a template folder")
+    nw.add_argument("job_id")
+    nw.add_argument("--from", dest="template", default=str(ROOT / "examples" / "demo-001"))
     args = p.parse_args(argv)
 
     _setup_logging()
@@ -63,6 +66,9 @@ def main(argv: list[str] | None = None) -> int:
             log.info("YouTube authorised; token saved to secrets/token.json")
             return 0
         container = make_container()
+        if args.cmd == "new":
+            log.info("Created %s", container.store().create(args.job_id, Path(args.template)))
+            return 0
         if args.cmd == "make":
             steps = WEEK1[WEEK1.index(args.start):] + (["upload"] if args.upload else [])
         else:

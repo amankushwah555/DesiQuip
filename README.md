@@ -23,7 +23,7 @@ powershell -ExecutionPolicy Bypass -File .\setup.ps1
 ## Make a Short
 
 ```powershell
-Copy-Item -Recurse examples\demo-001 jobs\
+.\.venv\Scripts\python -m desiquip new demo-001             # creates jobs\demo-001 from examples\demo-001
 .\.venv\Scripts\python -m desiquip make demo-001            # -> jobs\demo-001\final.mp4
 .\.venv\Scripts\python -m desiquip make demo-001 --upload   # also uploads (private)
 .\.venv\Scripts\python -m desiquip make demo-001 --from render   # resume from a step

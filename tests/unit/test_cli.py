@@ -57,6 +57,31 @@ def test_failure_returns_nonzero(monkeypatch):
     assert cli.main(["voice", "job1"]) == 1
 
 
+class TestNewJob:
+    def test_new_job_from_template_works_without_jobs_folder(self, tmp_path, monkeypatch):
+        from desiquip.adapters.job_store import FileJobStore
+        tpl = tmp_path / "examples" / "demo-001"
+        tpl.mkdir(parents=True)
+        (tpl / "script.json").write_text('{"job_id": "demo-001"}', encoding="utf-8")
+        store = FileJobStore(tmp_path / "jobs")          # jobs/ does not exist yet (fresh clone)
+
+        class C:
+            def store(self):
+                return store
+        monkeypatch.setattr(cli, "make_container", lambda: C())
+        assert cli.main(["new", "my-job", "--from", str(tpl)]) == 0
+        assert (tmp_path / "jobs" / "my-job" / "script.json").is_file()
+
+    def test_new_job_refuses_to_overwrite(self, tmp_path):
+        from desiquip.adapters.job_store import FileJobStore
+        tpl = tmp_path / "tpl"
+        tpl.mkdir()
+        store = FileJobStore(tmp_path / "jobs")
+        store.create("a", tpl)
+        with pytest.raises(FileExistsError):
+            store.create("a", tpl)
+
+
 class TestEncoderChoice:
     def test_auto_prefers_nvenc_when_it_works(self):
         assert choose_encoder("auto", nvenc_ok=True) == "h264_nvenc"
