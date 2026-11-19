@@ -9,9 +9,10 @@ import type { CaptionGroup, SceneProps, ShortProps } from "./types";
 const { fontFamily } = loadFont("normal", { weights: ["800"], subsets: ["devanagari", "latin"] });
 
 const PALETTE = ["#ff6b35", "#7b2cbf", "#06d6a0", "#ef476f", "#118ab2", "#ffd166"];
+const EMOJI = ["😱", "😂", "🤦‍♂️", "😳", "🤣", "🙄", "😅", "🤯"];
 const isVideo = (src: string) => /\.(mp4|mov|webm|mkv)$/i.test(src);
 
-const SceneView: React.FC<{ scene: SceneProps; index: number }> = ({ scene, index }) => {
+const SceneView: React.FC<{ scene: SceneProps; index: number; characterImage: string | null }> = ({ scene, index, characterImage }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
   // Zoom punch on every cut (spec: a visual change at least every 3-4 s), then a slow push-in.
@@ -29,14 +30,17 @@ const SceneView: React.FC<{ scene: SceneProps; index: number }> = ({ scene, inde
       </AbsoluteFill>
     );
   }
+  // No clip for this scene (no AI video yet): animated gradient + a bouncing reaction emoji.
   const a = PALETTE[index % PALETTE.length];
   const b = PALETTE[(index + 2) % PALETTE.length];
+  const bounce = Math.sin((frame / fps) * Math.PI * 2) * 18;
+  const emoji = EMOJI[index % EMOJI.length];
   return (
     <AbsoluteFill style={{ background: `linear-gradient(160deg, ${a}, ${b})`, transform: `scale(${scale})` }}>
-      <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", padding: 80 }}>
-        <div style={{ fontFamily, fontSize: 64, color: "rgba(255,255,255,0.35)", textAlign: "center" }}>
-          {scene.prompt}
-        </div>
+      <AbsoluteFill style={{ justifyContent: "flex-start", alignItems: "center", paddingTop: "17%" }}>
+        {characterImage
+          ? <Img src={staticFile(characterImage)} style={{ height: "40%", objectFit: "contain", transform: `translateY(${bounce}px) rotate(${bounce / 6}deg)` }} />
+          : <div style={{ fontSize: 300, transform: `translateY(${bounce}px) rotate(${bounce / 4}deg)` }}>{emoji}</div>}
       </AbsoluteFill>
     </AbsoluteFill>
   );
@@ -72,12 +76,12 @@ const Captions: React.FC<{ groups: CaptionGroup[] }> = ({ groups }) => {
 const Hook: React.FC<{ text: string }> = ({ text }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const s = spring({ frame, fps, config: { damping: 10, stiffness: 200 }, from: 0.3, to: 1 });
+  const s = spring({ frame, fps, config: { damping: 10, stiffness: 200 }, from: 0.85, to: 1 }); // readable from frame 0
   return (
-    <AbsoluteFill style={{ top: "12%", height: "20%", justifyContent: "center", alignItems: "center", padding: "0 70px" }}>
+    <AbsoluteFill style={{ top: "3%", height: "13%", justifyContent: "center", alignItems: "center", padding: "0 70px" }}>
       <div style={{
         transform: `scale(${s}) rotate(-2deg)`, background: "#ffe600", color: "#000", fontFamily,
-        fontWeight: 800, fontSize: 84, padding: "18px 36px", borderRadius: 24, textAlign: "center",
+        fontWeight: 800, fontSize: 70, padding: "14px 32px", borderRadius: 24, textAlign: "center",
         boxShadow: "0 12px 0 #000",
       }}>{text}</div>
     </AbsoluteFill>
@@ -91,7 +95,7 @@ const AiTag: React.FC = () => (
   }}>AI</div>
 );
 
-export const Short: React.FC<ShortProps> = ({ scenes, captionGroups, audio, hook, aiTag, loopEnd }) => {
+export const Short: React.FC<ShortProps> = ({ scenes, captionGroups, audio, characterImage, hook, aiTag, loopEnd }) => {
   const { fps, durationInFrames } = useVideoConfig();
   const frame = useCurrentFrame();
   // Loop end: fade the last 6 frames toward the first scene's colour so the replay feels seamless.
@@ -104,7 +108,7 @@ export const Short: React.FC<ShortProps> = ({ scenes, captionGroups, audio, hook
         const dur = Math.max(1, Math.round(scene.end * fps) - from);
         return (
           <Sequence key={i} from={from} durationInFrames={dur} name={`scene ${i}`}>
-            <SceneView scene={scene} index={i} />
+            <SceneView scene={scene} index={i} characterImage={characterImage} />
           </Sequence>
         );
       })}

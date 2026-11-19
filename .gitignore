@@ -6,7 +6,7 @@ token*.json
 
 # Runtime data
 jobs/
-data/*.db
+data/
 logs/
 remotion/public/jobs/
 remotion/out/

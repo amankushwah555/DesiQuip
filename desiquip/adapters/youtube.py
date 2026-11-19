@@ -22,6 +22,13 @@ RETRIABLE_STATUS = {500, 502, 503, 504}
 
 
 def build_request_body(meta: UploadMetadata) -> dict[str, Any]:
+    body = _body(meta)
+    if meta.publish_at is not None:
+        body["status"]["publishAt"] = meta.publish_at.isoformat()
+    return body
+
+
+def _body(meta: UploadMetadata) -> dict[str, Any]:
     return {
         "snippet": {
             "title": meta.title,
@@ -64,6 +71,18 @@ def authorize(secrets_dir: Path):
 class YouTubeUploader:
     def __init__(self, secrets_dir: Path) -> None:
         self.secrets_dir = Path(secrets_dir)
+
+    def _api(self):
+        from googleapiclient.discovery import build
+        return build("youtube", "v3", credentials=authorize(self.secrets_dir), cache_discovery=False)
+
+    def set_thumbnail(self, video_id: str, image: Path) -> None:
+        from googleapiclient.http import MediaFileUpload
+        self._api().thumbnails().set(videoId=video_id, media_body=MediaFileUpload(str(image))).execute()
+
+    def add_to_playlist(self, video_id: str, playlist_id: str) -> None:
+        self._api().playlistItems().insert(part="snippet", body={"snippet": {
+            "playlistId": playlist_id, "resourceId": {"kind": "youtube#video", "videoId": video_id}}}).execute()
 
     def upload(self, video: Path, meta: UploadMetadata) -> str:
         from googleapiclient.discovery import build

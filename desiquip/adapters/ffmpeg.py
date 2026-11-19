@@ -77,6 +77,25 @@ def build_finalize_cmd(ffmpeg: str, src: Path, out: Path, spec: VideoSpec, measu
             "-ar", str(SAMPLE_RATE), "-movflags", "+faststart", str(out)]
 
 
+def parse_integrated_lufs(ebur128_stderr: str) -> float:
+    """Integrated loudness from ffmpeg's ebur128 summary ('I:  -14.0 LUFS')."""
+    found = re.findall(r"^\s*I:\s*(-?\d+(?:\.\d+)?)\s*LUFS", ebur128_stderr, re.MULTILINE)
+    if not found:
+        raise ValueError("integrated loudness not found in ebur128 output")
+    return float(found[-1])
+
+
+def parse_probe(probe_json: dict, lufs: float) -> "MediaInfo":
+    from ..ports import MediaInfo
+
+    v = next(s for s in probe_json["streams"] if s["codec_type"] == "video")
+    a = next((s for s in probe_json["streams"] if s["codec_type"] == "audio"), {"codec_name": "none"})
+    num, den = (int(x) for x in v["r_frame_rate"].split("/"))
+    return MediaInfo(width=int(v["width"]), height=int(v["height"]), fps=round(num / den, 3),
+                     duration_s=float(probe_json["format"]["duration"]), vcodec=v["codec_name"],
+                     acodec=a["codec_name"], lufs=lufs)
+
+
 class FFmpegMedia:
     def __init__(self) -> None:
         self.ffmpeg = _which("ffmpeg")
@@ -89,6 +108,24 @@ class FFmpegMedia:
 
     def mix_voice(self, placements: list[VoicePlacement], total_s: float, out: Path) -> None:
         subprocess.run(build_mix_cmd(self.ffmpeg, placements, total_s, out), check=True)
+
+    def inspect(self, path: Path):
+        out = subprocess.run([self.ffprobe, "-v", "error", "-show_streams", "-show_format", "-of", "json",
+                              str(path)], check=True, capture_output=True, text=True).stdout
+        loud = subprocess.run([self.ffmpeg, "-hide_banner", "-nostats", "-i", str(path),
+                               "-af", "ebur128=framelog=quiet", "-f", "null", "-"],
+                              capture_output=True, text=True, encoding="utf-8", errors="replace")
+        return parse_probe(json.loads(out), parse_integrated_lufs(loud.stderr))
+
+    def frames(self, src: Path, times: list[float], out_dir: Path) -> list[Path]:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        paths = []
+        for i, t in enumerate(times):
+            p = out_dir / f"frame_{i}.jpg"
+            subprocess.run([self.ffmpeg, "-v", "error", "-y", "-ss", str(t), "-i", str(src), "-frames:v", "1",
+                            "-vf", "scale=540:-1", str(p)], check=True)
+            paths.append(p)
+        return paths
 
     def nvenc_works(self) -> bool:
         """Listing an encoder isn't enough (needs an NVIDIA driver), so try a tiny real encode."""

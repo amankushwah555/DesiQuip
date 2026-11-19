@@ -2,7 +2,8 @@
 
 AI pipeline that makes 1–2 funny Hindi YouTube Shorts a day plus 1 long video a week, with one
 human approval per video. The full spec is `references/AI YouTube Comedy Channel — Developer Spec.pdf`.
-We build in its 4 weekly stages; Week 1 (render + upload) is done.
+All 4 stages are built: the agents live in `.claude/agents/`, and the orchestrator in `desiquip/services/orchestrator.py`.
+Paid services switch on with keys in `.env` (see README), and every one has a free fallback.
 
 ## Architecture: ports & adapters
 - `desiquip/domain/`: pure rules (script contract, timeline, captions). No I/O, no third-party imports.

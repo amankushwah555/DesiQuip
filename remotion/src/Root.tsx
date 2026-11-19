@@ -1,5 +1,7 @@
 import React from "react";
-import { Composition } from "remotion";
+import { Composition, Still } from "remotion";
+import { Thumbnail, type ThumbnailProps } from "./Thumbnail";
+import { UncleJi } from "./CharacterArt";
 import { Short } from "./Short";
 import type { ShortProps } from "./types";
 
@@ -8,12 +10,13 @@ const preview: ShortProps = {
   fps: 30,
   durationInFrames: 150,
   audio: null,
+  characterImage: null,
   aiTag: true,
   loopEnd: true,
   hook: { text: "अंकल ने फिर से किया!", untilS: 2 },
   scenes: [
-    { start: 0, end: 2.5, caption: "अरे बाप रे!", prompt: "", asset: null, sfx: null },
-    { start: 2.5, end: 5, caption: "ये क्या है?", prompt: "", asset: null, sfx: null },
+    { start: 0, end: 2.5, caption: "अरे बाप रे!", asset: null, sfx: null },
+    { start: 2.5, end: 5, caption: "ये क्या है?", asset: null, sfx: null },
   ],
   captionGroups: [
     { start: 0.2, end: 1.2, words: [
@@ -24,6 +27,15 @@ const preview: ShortProps = {
 };
 
 export const RemotionRoot: React.FC = () => (
+  <>
+  <Still id="UncleJi" component={UncleJi} width={900} height={1300} />
+  <Still
+    id="Thumbnail"
+    component={Thumbnail}
+    width={1080}
+    height={1920}
+    defaultProps={{ text: "₹5000 बिल?!", variant: 1, characterImage: null } as ThumbnailProps}
+  />
   <Composition
     id="Short"
     component={Short}
@@ -34,4 +46,5 @@ export const RemotionRoot: React.FC = () => (
     defaultProps={preview}
     calculateMetadata={({ props }) => ({ durationInFrames: props.durationInFrames, fps: props.fps })}
   />
+  </>
 );
