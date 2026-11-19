@@ -1,5 +1,7 @@
 # DesiQuip
 
+[![CI](https://github.com/amankushwah555/DesiQuip/actions/workflows/ci.yml/badge.svg)](https://github.com/amankushwah555/DesiQuip/actions/workflows/ci.yml)
+
 An automated Hindi comedy Shorts pipeline: script → voice → word-synced captions → Remotion render → FFmpeg
 finalize → YouTube upload. Claude Code agents do the thinking, and Python and Node do the heavy work.
 
