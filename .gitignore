@@ -1,0 +1,27 @@
+# Secrets
+.env
+secrets/
+client_secret*.json
+token*.json
+
+# Runtime data
+jobs/
+data/*.db
+logs/
+remotion/public/jobs/
+remotion/out/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node
+node_modules/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

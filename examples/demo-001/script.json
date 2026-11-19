@@ -1,0 +1,27 @@
+{
+  "job_id": "demo-001",
+  "source_id": "orig-0001",
+  "character": "uncle_ji",
+  "length_s": 34,
+  "hook": {"text": "अंकल ने फिर से किया!", "visual": "close-up shock face", "until_s": 2},
+  "scenes": [
+    {"t": [0, 4], "prompt": "Uncle ji stares at his phone in shock", "clip": "remotion",
+     "line": "अरे बाप रे! बिजली का बिल फिर से आ गया!", "caption": "अरे बाप रे! बिजली का बिल फिर से आ गया!", "sfx": "boing"},
+    {"t": [4, 8], "prompt": "Bill amount zooms in", "clip": "remotion",
+     "line": "इतना बिल? मैंने तो सिर्फ एक बल्ब जलाया था!", "caption": "इतना बिल? मैंने तो सिर्फ एक बल्ब जलाया था!", "sfx": "whoosh"},
+    {"t": [8, 13], "prompt": "Flashback: AC, geyser, TV all running", "clip": "remotion",
+     "line": "और हां... AC, गीज़र, टीवी, और पड़ोसी का फ्रिज भी।", "caption": "और हां... AC, गीज़र, टीवी, और पड़ोसी का फ्रिज भी।", "sfx": "record-scratch"},
+    {"t": [13, 18], "prompt": "Uncle ji in a meeting with the whole family", "clip": "remotion",
+     "line": "आज से घर में नया नियम। जो कमरे से निकलेगा, लाइट बंद करेगा!", "caption": "आज से घर में नया नियम। जो कमरे से निकलेगा, लाइट बंद करेगा!", "sfx": null},
+    {"t": [18, 23], "prompt": "Grandson holds up a smart plug", "clip": "remotion",
+     "line": "पोता बोला, दादाजी, ये स्मार्ट प्लग लगा लो, फोन से बंद हो जाएगा।", "caption": "पोता बोला, दादाजी, ये स्मार्ट प्लग लगा लो, फोन से बंद हो जाएगा।", "sfx": "ding"},
+    {"t": [23, 28], "prompt": "Uncle ji presses phone, lights go off everywhere", "clip": "remotion",
+     "line": "अब मैं सोफे से ही पूरे घर की बत्ती गुल करता हूं।", "caption": "अब मैं सोफे से ही पूरे घर की बत्ती गुल करता हूं।", "sfx": "click"},
+    {"t": [28, 34], "prompt": "Dark house, family shouting", "clip": "remotion",
+     "line": "बस दिक्कत ये है कि घरवाले अंधेरे में बैठे हैं... और बिल फिर से आ गया!", "caption": "बस दिक्कत ये है कि घरवाले अंधेरे में बैठे हैं... और बिल फिर से आ गया!", "sfx": "boing"}
+  ],
+  "product_moment": {"t": 20, "product_ref": "p1"},
+  "products": [{"ref": "p1", "program": "amazon", "query": "smart plug wifi"}],
+  "loop_end": true,
+  "title_options": ["अंकल जी और बिजली का बिल 😂", "Uncle Ji vs Electricity Bill", "स्मार्ट प्लग का कमाल"]
+}

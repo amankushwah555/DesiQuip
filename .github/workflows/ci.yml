@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "week*"]
+  pull_request:
+  workflow_dispatch:        # "Run workflow" button; also runs the end-to-end render
+
+# Public repo: the token can only read, and no secrets are used anywhere in this file,
+# so pull requests from forks can't change the repo or leak keys.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]   # Windows = the GPU laptop's OS
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install Python dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Unit tests
+        run: python -m pytest -q
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: remotion/package-lock.json
+
+      - name: Remotion type-check
+        working-directory: remotion
+        run: |
+          npm ci --no-audit --no-fund
+          npm run typecheck
+
+  e2e:
+    name: End-to-end demo render (Windows, CPU)
+    # Manual runs and PRs into main only: it takes ~10 min and downloads models.
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.base_ref == 'main')
+    needs: test
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: remotion/package-lock.json
+
+      - name: Install FFmpeg
+        run: choco install ffmpeg -y --no-progress
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          python -m pip install -r requirements.txt
+          Push-Location remotion
+          npm ci --no-audit --no-fund
+          node node_modules/@remotion/cli/remotion-cli.js browser ensure
+          Pop-Location
+
+      - name: Make the demo Short
+        shell: pwsh
+        run: |
+          python -m desiquip new demo-001
+          python -m desiquip make demo-001
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: Check output against spec (1080x1920, 30 fps, 30-45 s, -14 LUFS)
+        shell: pwsh
+        run: |
+          $p = ffprobe -v error -select_streams v:0 -show_entries stream=width,height,r_frame_rate -show_entries format=duration -of json jobs/demo-001/final.mp4 | ConvertFrom-Json
+          $s = $p.streams[0]; $d = [double]$p.format.duration
+          "width=$($s.width) height=$($s.height) fps=$($s.r_frame_rate) duration=$d"
+          if ($s.width -ne 1080 -or $s.height -ne 1920) { throw "wrong resolution" }
+          if ($s.r_frame_rate -ne "30/1") { throw "wrong fps" }
+          if ($d -lt 30 -or $d -gt 45) { throw "duration $d outside 30-45 s" }
+          $lufs = (ffmpeg -hide_banner -nostats -i jobs/demo-001/final.mp4 -af ebur128=framelog=quiet -f null - 2>&1 | Select-String "^\s+I:" | Select-Object -Last 1).ToString()
+          "loudness: $lufs"
+          $v = [double]([regex]::Match($lufs, "-?\d+\.\d+").Value)
+          if ($v -lt -16 -or $v -gt -12) { throw "loudness $v outside -14 +/- 2 LUFS" }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: demo-short
+          path: |
+            jobs/demo-001/final.mp4
+            jobs/demo-001/captions.json
+          retention-days: 7
