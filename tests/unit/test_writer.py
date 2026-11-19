@@ -49,6 +49,11 @@ class TestScriptRules:
         long = script_with(GOOD_LINES, title_options=["a", "b", "x" * 50])
         assert any("50" in p for p in check_script(long, RULES))
 
+    def test_hook_must_tease_not_repeat_the_first_line(self):
+        # Found in a real run: the hook banner and first caption said the same words at once.
+        s = script_with(GOOD_LINES, hook={"text": GOOD_LINES[0], "visual": "", "until_s": 2})
+        assert any("hook" in p and "repeat" in p for p in check_script(s, RULES))
+
     def test_needs_loop_ending(self):
         assert any("loop" in p for p in check_script(script_with(GOOD_LINES, loop_end=False), RULES))
 

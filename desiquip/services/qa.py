@@ -48,6 +48,8 @@ class QAService:
 
         failed = [f"{c.name}: {c.detail}" for c in checks if not c.ok]
         content_failed = [f"{n}: {d}" for n, ok, d in checks_review if not ok]
+        if content_failed and review and review.get("notes"):
+            content_failed.append(f"reviewer notes (fix these): {review['notes']}")
         passed = not failed and not content_failed
         self.store.write_json(job_id, "qa.json", {
             "passed": passed, "checks": [asdict(c) for c in checks],

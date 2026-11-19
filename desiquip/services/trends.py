@@ -55,11 +55,15 @@ class TrendService:
                                                      indent=2), encoding="utf-8")
 
         ideas_rel = f"data/trends/{day}-ideas.json"
+        recent = self._recent_topics()
         feedback: list[str] = []
         for _ in range(self.retries + 1):
             prompt = (f"Find today's ideas. Inputs: data/trends/{day}.json (YouTube trending in India; may be empty), "
                       f"growth/topics.md, growth/learnings.md, characters/{self.character}.md. "
                       f"Give at least {count} ideas. Write {ideas_rel} following your instructions.")
+            if recent:
+                prompt += ("\n\nRecent topics (do not repeat these situations):\n" +
+                           "\n".join(f"- {t}" for t in recent))
             if feedback:
                 prompt += "\n\nYour previous file was rejected. Fix:\n" + "\n".join(f"- {p}" for p in feedback)
             self.runner.run("trend-finder", prompt, TOOLS)
@@ -85,6 +89,16 @@ class TrendService:
             created.append(job_id)
             log.info("New job %s: %s", job_id, topic)
         return created
+
+    def _recent_topics(self, limit: int = 20) -> list[str]:
+        ideas = sorted((self.root / "jobs").glob("*/idea.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+        topics = []
+        for p in ideas[:limit]:
+            try:
+                topics.append(json.loads(p.read_text(encoding="utf-8"))["topic"].split(" — ")[0])
+            except (OSError, KeyError, json.JSONDecodeError):
+                continue
+        return topics
 
     def _next_job_id(self, day: str) -> str:
         k = 1

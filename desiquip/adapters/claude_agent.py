@@ -12,6 +12,21 @@ from typing import Any
 log = logging.getLogger(__name__)
 
 
+def parse_result(stdout: str) -> dict[str, Any]:
+    """The JSON result object from `claude -p --output-format json`, ignoring any noise around it."""
+    for line in reversed(stdout.strip().splitlines()):
+        line = line.strip()
+        if line.startswith("{"):
+            try:
+                return json.loads(line)
+            except json.JSONDecodeError:
+                continue
+    try:
+        return json.loads(stdout)
+    except json.JSONDecodeError:
+        return {"result": stdout}
+
+
 def build_agent_cmd(claude: str, agent: str, prompt: str, tools: str, budget_usd: float) -> list[str]:
     return [claude, "-p", prompt, "--agent", agent, "--allowedTools", tools,
             "--permission-mode", "acceptEdits", "--output-format", "json",
@@ -35,10 +50,7 @@ class ClaudeAgent:
                            errors="replace", timeout=self.timeout_s)
         if r.returncode != 0:
             raise RuntimeError(f"Agent '{agent}' failed (exit {r.returncode}): {(r.stderr or r.stdout)[-800:]}")
-        try:
-            result = json.loads(r.stdout)
-        except json.JSONDecodeError:
-            result = {"result": r.stdout}
+        result = parse_result(r.stdout)
         log.info("Agent %s finished in %.0f s, %s turns, cost $%.3f", agent, result.get("duration_ms", 0) / 1000,
                  result.get("num_turns"), result.get("total_cost_usd", 0) or 0)
         return result

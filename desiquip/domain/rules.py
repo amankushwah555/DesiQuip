@@ -39,6 +39,10 @@ def check_script(script: Script, r: ScriptRules) -> list[str]:
         if est > r.max_scene_s:
             problems.append(f"scenes[{i}] is about {est:.1f} s of speech; max is {r.max_scene_s} s "
                             f"(a visual change every 4 s) - split it into two scenes.")
+    first = script.scenes[0].line.strip() if script.scenes else ""
+    if first and script.hook.text.strip() and (script.hook.text.strip() in first or first in script.hook.text.strip()):
+        problems.append("hook.text repeats the first line (the banner and the caption would say the same thing); "
+                        "make the hook a tease of the twist instead.")
     if script.hook.until_s > r.hook_by_s:
         problems.append(f"hook.until_s is {script.hook.until_s}; the hook must land within {r.hook_by_s:.0f} s.")
     if len(script.title_options) != 3:

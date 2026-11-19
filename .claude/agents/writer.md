@@ -17,6 +17,9 @@ rejects it if any rule below is broken, so follow the rules precisely.
 ## 2. Write the comedy
 - **Hook (0-2 s):** write 5 hook options in your head, keep the strongest. The hook must make the viewer
   need the next line (shock, a wrong-sounding claim, a question). Max ~25 characters.
+  It is shown as a banner **while line 1 is spoken**, so it must **tease the twist or payoff, never repeat
+  line 1** (e.g. line 1 sets up the geyser timetable, the hook teases "मेरा स्लॉट सुबह 5 बजे?!").
+- **If reviewer feedback is given:** apply every note specifically. It comes from watching the last version.
 - **Story:** one simple situation, an escalation, and a twist. Every 1-2 lines needs a laugh or a turn.
 - **Loop ending:** the last line must lead naturally back into the first line, so a replay feels seamless.
 - **Product inside a joke:** if the idea suits one, put an everyday product into a joke (a smart plug, a

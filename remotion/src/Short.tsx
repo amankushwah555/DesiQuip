@@ -37,9 +37,9 @@ const SceneView: React.FC<{ scene: SceneProps; index: number; characterImage: st
   const emoji = EMOJI[index % EMOJI.length];
   return (
     <AbsoluteFill style={{ background: `linear-gradient(160deg, ${a}, ${b})`, transform: `scale(${scale})` }}>
-      <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", paddingBottom: 380 }}>
+      <AbsoluteFill style={{ justifyContent: "flex-start", alignItems: "center", paddingTop: "17%" }}>
         {characterImage
-          ? <Img src={staticFile(characterImage)} style={{ height: "62%", objectFit: "contain", transform: `translateY(${bounce}px) rotate(${bounce / 6}deg)` }} />
+          ? <Img src={staticFile(characterImage)} style={{ height: "40%", objectFit: "contain", transform: `translateY(${bounce}px) rotate(${bounce / 6}deg)` }} />
           : <div style={{ fontSize: 300, transform: `translateY(${bounce}px) rotate(${bounce / 4}deg)` }}>{emoji}</div>}
       </AbsoluteFill>
     </AbsoluteFill>
@@ -78,10 +78,10 @@ const Hook: React.FC<{ text: string }> = ({ text }) => {
   const { fps } = useVideoConfig();
   const s = spring({ frame, fps, config: { damping: 10, stiffness: 200 }, from: 0.3, to: 1 });
   return (
-    <AbsoluteFill style={{ top: "12%", height: "20%", justifyContent: "center", alignItems: "center", padding: "0 70px" }}>
+    <AbsoluteFill style={{ top: "3%", height: "13%", justifyContent: "center", alignItems: "center", padding: "0 70px" }}>
       <div style={{
         transform: `scale(${s}) rotate(-2deg)`, background: "#ffe600", color: "#000", fontFamily,
-        fontWeight: 800, fontSize: 84, padding: "18px 36px", borderRadius: 24, textAlign: "center",
+        fontWeight: 800, fontSize: 70, padding: "14px 32px", borderRadius: 24, textAlign: "center",
         boxShadow: "0 12px 0 #000",
       }}>{text}</div>
     </AbsoluteFill>

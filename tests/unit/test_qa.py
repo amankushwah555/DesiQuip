@@ -97,6 +97,14 @@ class TestQAService:
             QAService(FakeMediaQA(loud), store, rights, FakeReviewer(GOOD_REVIEW), RULES).run(job)
         assert e.value.kind == "technical" and "loudness" in str(e.value)
 
+    def test_reviewer_notes_reach_the_writer(self, store, qa_job):
+        # Found in a real run: only "hook 4/10" was passed on, so rewrites were blind.
+        job, rights = qa_job
+        review = {**GOOD_REVIEW, "humour": 5, "notes": "Lines 4 and 5 repeat; merge them."}
+        with pytest.raises(QAFailed) as e:
+            QAService(FakeMediaQA(), store, rights, FakeReviewer(review), RULES).run(job)
+        assert any("Lines 4 and 5 repeat" in r for r in e.value.reasons)
+
     def test_too_long_is_a_content_problem(self, store, qa_job):
         # Found in a real run: a 45.1 s video was re-rendered twice, but only a rewrite can shorten it.
         job, rights = qa_job
@@ -139,6 +147,12 @@ def test_parse_media_info_and_loudness():
         {"codec_type": "video", "codec_name": "h264", "width": 1080, "height": 1920, "r_frame_rate": "30/1"},
         {"codec_type": "audio", "codec_name": "aac"}], "format": {"duration": "41.1"}}, lufs)
     assert info == MediaInfo(1080, 1920, 30.0, 41.1, "h264", "aac", -14.0)
+
+
+def test_agent_result_is_parsed_even_with_noise_around_the_json():
+    from desiquip.adapters.claude_agent import parse_result
+    out = 'warning: something\n{"type":"result","duration_ms":46000,"num_turns":6,"total_cost_usd":0.2}\n'
+    assert parse_result(out)["num_turns"] == 6
 
 
 def test_agent_command_is_generic_and_scoped():

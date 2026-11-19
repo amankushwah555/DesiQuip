@@ -65,6 +65,13 @@ class TestTrendService:
             s.run(count=2)
         assert len(agent.prompts) == 2
 
+    def test_recent_topics_are_listed_so_ideas_dont_repeat(self, env):
+        # Found in a real run: the same rejected idea came back the next run.
+        s, agent = svc(env, [IDEA])
+        s.run(count=1)
+        s.run(count=1)
+        assert "अंकल जी और ऑनलाइन क्लास" in agent.prompts[-1] and "do not repeat" in agent.prompts[-1].lower()
+
     def test_works_without_youtube_key(self, env):
         s, _ = svc(env, [IDEA], source=None)
         assert s.run(count=1) == ["2026-11-20-01"]
