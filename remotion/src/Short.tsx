@@ -76,7 +76,7 @@ const Captions: React.FC<{ groups: CaptionGroup[] }> = ({ groups }) => {
 const Hook: React.FC<{ text: string }> = ({ text }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const s = spring({ frame, fps, config: { damping: 10, stiffness: 200 }, from: 0.3, to: 1 });
+  const s = spring({ frame, fps, config: { damping: 10, stiffness: 200 }, from: 0.85, to: 1 }); // readable from frame 0
   return (
     <AbsoluteFill style={{ top: "3%", height: "13%", justifyContent: "center", alignItems: "center", padding: "0 70px" }}>
       <div style={{
