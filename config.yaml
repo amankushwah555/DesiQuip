@@ -40,3 +40,26 @@ writer:
   max_scene_s: 4.5         # spec: visual change every 3-4 s
   retries: 1               # spec: invalid output = retry once, then fail
   budget_usd: 1.0          # cap per Writer run (applies to API billing)
+
+clips:
+  # AI hero clips via fal. Empty = free mode (template animates every scene).
+  # With FAL_KEY set, e.g.: [veo3.1-fast, kling-v3-pro]  (first = preferred, rest = fallbacks)
+  models: []
+  max_hero: 3              # spec: only 2-3 hero clips per Short (cost control)
+
+qa:
+  claude_review: true      # qa-reviewer agent scores hook / humour / safety from the opening frames
+  min_humour: 7            # spec: humour 7/10 or higher to pass
+  min_hook: 7
+
+agents:
+  budget_usd: 1.0          # max spend per agent run (applies to API billing)
+
+flow:
+  # Step order for each job. Change the pipeline here (no code changes needed).
+  produce: [write, voice, clips, captions, render, finalize, qa, package]
+  max_retries: 2           # spec: QA failure loops back at most 2 times, then the job is rejected
+
+daily:
+  jobs: 2                  # spec: 2 Shorts a day
+  character: uncle_ji

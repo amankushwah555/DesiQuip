@@ -40,14 +40,14 @@ def rec(monkeypatch):
 
 def test_make_runs_week1_steps_in_order_without_upload(rec):
     assert cli.main(["make", "job1"]) == 0
-    assert rec.calls == [("voice", "job1"), ("caption", "job1"), ("render", "job1"), ("finalize", "job1")]
+    assert rec.calls == [("voice", "job1"), ("clip", "job1"), ("caption", "job1"), ("render", "job1"), ("finalize", "job1"), ("qa", "job1"), ("package", "job1")]
 
 
 def test_make_starts_with_the_writer_when_there_is_no_script(monkeypatch):
     r = Recorder(has_script=False)
     monkeypatch.setattr(cli, "make_container", lambda: r)
     cli.main(["make", "job1"])
-    assert [s for s, _ in r.calls] == ["write", "voice", "caption", "render", "finalize"]
+    assert [s for s, _ in r.calls] == ["write", "voice", "clip", "caption", "render", "finalize", "qa", "package"]
 
 
 def test_validate_returns_nonzero_on_problems(monkeypatch, capsys):
@@ -71,7 +71,7 @@ def test_single_step(rec):
 
 def test_make_can_resume_from_a_step(rec):
     cli.main(["make", "job1", "--from", "render"])
-    assert [s for s, _ in rec.calls] == ["render", "finalize"]
+    assert [s for s, _ in rec.calls] == ["render", "finalize", "qa", "package"]
 
 
 def test_failure_returns_nonzero(monkeypatch):
@@ -105,6 +105,57 @@ class TestNewJob:
         store.create("a", tpl)
         with pytest.raises(FileExistsError):
             store.create("a", tpl)
+
+
+class TestOrchestratorCommands:
+    class C:
+        def __init__(self, tmp_path):
+            from desiquip.adapters.approval import ConsoleApprover
+            from desiquip.adapters.jobs_db import SqliteJobs
+            self.ap = ConsoleApprover(tmp_path / "decisions.json")
+            self.db = SqliteJobs(tmp_path / "db.sqlite")
+            self.orch_calls = []
+
+        def approver(self):
+            return self.ap
+
+        def jobs(self):
+            return self.db
+
+        def orchestrator(self, run_step):
+            outer = self
+
+            class O:
+                def produce(self, job_id, start=None):
+                    outer.orch_calls.append(("produce", job_id, start))
+
+                def process_approvals(self):
+                    outer.orch_calls.append(("approvals",))
+
+                def send_summary(self):
+                    outer.orch_calls.append(("summary",))
+            return O()
+
+    def test_approve_and_reject_record_decisions_then_process(self, tmp_path, monkeypatch):
+        c = self.C(tmp_path)
+        monkeypatch.setattr(cli, "make_container", lambda: c)
+        assert cli.main(["reject", "j1", "--note", "boring hook"]) == 0
+        assert c.orch_calls == [("approvals",)]
+
+    def test_produce_runs_orchestrator(self, tmp_path, monkeypatch):
+        c = self.C(tmp_path)
+        monkeypatch.setattr(cli, "make_container", lambda: c)
+        cli.main(["produce", "j1", "--from", "render"])
+        assert c.orch_calls == [("produce", "j1", "render")]
+        assert c.db.get("j1") is not None
+
+    def test_status_lists_jobs(self, tmp_path, monkeypatch, capsys):
+        c = self.C(tmp_path)
+        c.db.create("j9")
+        c.db.set("j9", "awaiting_approval")
+        monkeypatch.setattr(cli, "make_container", lambda: c)
+        cli.main(["status"])
+        assert "j9" in capsys.readouterr().out
 
 
 class TestEncoderChoice:

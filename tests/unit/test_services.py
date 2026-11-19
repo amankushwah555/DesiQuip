@@ -96,7 +96,7 @@ class TestRender:
         assert props["aiTag"] is True
         assert props["hook"]["text"] == script.hook.text
         assert props["scenes"][1] == {"start": 2.0, "end": 4.0, "caption": "ये क्या है?",
-                                      "prompt": "kitchen", "asset": "kitchen.png", "sfx": None}
+                                      "asset": "kitchen.png", "sfx": None}
         assert props["captionGroups"] == self.CAPTIONS["groups"]
 
     def test_render_passes_voice_and_scene_assets(self, store, job):

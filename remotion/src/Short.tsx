@@ -9,9 +9,10 @@ import type { CaptionGroup, SceneProps, ShortProps } from "./types";
 const { fontFamily } = loadFont("normal", { weights: ["800"], subsets: ["devanagari", "latin"] });
 
 const PALETTE = ["#ff6b35", "#7b2cbf", "#06d6a0", "#ef476f", "#118ab2", "#ffd166"];
+const EMOJI = ["😱", "😂", "🤦‍♂️", "😳", "🤣", "🙄", "😅", "🤯"];
 const isVideo = (src: string) => /\.(mp4|mov|webm|mkv)$/i.test(src);
 
-const SceneView: React.FC<{ scene: SceneProps; index: number }> = ({ scene, index }) => {
+const SceneView: React.FC<{ scene: SceneProps; index: number; characterImage: string | null }> = ({ scene, index, characterImage }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
   // Zoom punch on every cut (spec: a visual change at least every 3-4 s), then a slow push-in.
@@ -29,14 +30,17 @@ const SceneView: React.FC<{ scene: SceneProps; index: number }> = ({ scene, inde
       </AbsoluteFill>
     );
   }
+  // No clip for this scene (no AI video yet): animated gradient + a bouncing reaction emoji.
   const a = PALETTE[index % PALETTE.length];
   const b = PALETTE[(index + 2) % PALETTE.length];
+  const bounce = Math.sin((frame / fps) * Math.PI * 2) * 18;
+  const emoji = EMOJI[index % EMOJI.length];
   return (
     <AbsoluteFill style={{ background: `linear-gradient(160deg, ${a}, ${b})`, transform: `scale(${scale})` }}>
-      <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", padding: 80 }}>
-        <div style={{ fontFamily, fontSize: 64, color: "rgba(255,255,255,0.35)", textAlign: "center" }}>
-          {scene.prompt}
-        </div>
+      <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", paddingBottom: 380 }}>
+        {characterImage
+          ? <Img src={staticFile(characterImage)} style={{ height: "62%", objectFit: "contain", transform: `translateY(${bounce}px) rotate(${bounce / 6}deg)` }} />
+          : <div style={{ fontSize: 300, transform: `translateY(${bounce}px) rotate(${bounce / 4}deg)` }}>{emoji}</div>}
       </AbsoluteFill>
     </AbsoluteFill>
   );
@@ -91,7 +95,7 @@ const AiTag: React.FC = () => (
   }}>AI</div>
 );
 
-export const Short: React.FC<ShortProps> = ({ scenes, captionGroups, audio, hook, aiTag, loopEnd }) => {
+export const Short: React.FC<ShortProps> = ({ scenes, captionGroups, audio, characterImage, hook, aiTag, loopEnd }) => {
   const { fps, durationInFrames } = useVideoConfig();
   const frame = useCurrentFrame();
   // Loop end: fade the last 6 frames toward the first scene's colour so the replay feels seamless.
@@ -104,7 +108,7 @@ export const Short: React.FC<ShortProps> = ({ scenes, captionGroups, audio, hook
         const dur = Math.max(1, Math.round(scene.end * fps) - from);
         return (
           <Sequence key={i} from={from} durationInFrames={dur} name={`scene ${i}`}>
-            <SceneView scene={scene} index={i} />
+            <SceneView scene={scene} index={i} characterImage={characterImage} />
           </Sequence>
         );
       })}

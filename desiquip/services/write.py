@@ -50,7 +50,12 @@ class WriteService:
             raise FileNotFoundError(f"{jd / 'idea.json'} not found; create the job with: new {job_id} --topic \"...\"")
         idea = self.store.read_json(job_id, "idea.json")
 
+        # Notes from the QA reviewer on the previous version of this video (orchestrator retry).
+        prior = jd / "feedback.json"
         feedback: list[str] = []
+        if prior.is_file():
+            notes = self.store.read_json(job_id, "feedback.json").get("notes", [])
+            feedback = [f"Reviewer feedback on the last version: {n}" for n in notes]
         for attempt in range(1, self.retries + 2):
             self.writer.write(job_id, feedback)
             problems = script_problems(self.store, job_id, self.rules, idea.get("source_id"))

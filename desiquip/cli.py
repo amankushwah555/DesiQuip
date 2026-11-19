@@ -18,9 +18,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 # CLI step name -> Container service name, in pipeline order.
-STEPS = {"write": "write", "voice": "voice", "captions": "caption", "render": "render",
-         "finalize": "finalize", "upload": "publish"}
-PIPELINE = ["write", "voice", "captions", "render", "finalize"]
+STEPS = {"write": "write", "voice": "voice", "clips": "clip", "captions": "caption", "render": "render",
+         "finalize": "finalize", "qa": "qa", "package": "package", "upload": "publish"}
+PIPELINE = ["write", "voice", "clips", "captions", "render", "finalize", "qa", "package"]
 
 
 def make_container():
@@ -45,6 +45,20 @@ def run_step(container, step: str, job_id: str):
     return result
 
 
+def run_daily(container, step_runner, count: int | None) -> int:
+    """Spec section 9, 14:00 run: new jobs from the Trend finder, produce each, then report.
+    A failed job never blocks the others."""
+    log = logging.getLogger("desiquip")
+    orch = container.orchestrator(step_runner)
+    orch.process_approvals()
+    job_ids = container.trend_service().run(count or container.daily_count())
+    for job_id in job_ids:
+        result = orch.produce(job_id)
+        log.info("== %s -> %s", job_id, result)
+    orch.send_summary()
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="desiquip", description="DesiQuip Shorts pipeline")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -63,6 +77,19 @@ def main(argv: list[str] | None = None) -> int:
     src.add_argument("--topic", help="idea for the Writer agent, e.g. \"बिजली का बिल\"")
     src.add_argument("--from", dest="template", default=str(ROOT / "examples" / "demo-001"))
     nw.add_argument("--character", default="uncle_ji")
+    pr = sub.add_parser("produce", help="orchestrated: run the flow with QA retries, then ask for approval")
+    pr.add_argument("job_id")
+    pr.add_argument("--from", dest="start", default=None)
+    dl = sub.add_parser("run-daily", help="Trend finder -> N new jobs -> produce each -> approvals -> summary")
+    dl.add_argument("--count", type=int, default=None)
+    sub.add_parser("approvals", help="process Approve/Reject decisions (Telegram or CLI) and publish approved jobs")
+    ap = sub.add_parser("approve", help="approve a job awaiting approval (publishes it)")
+    ap.add_argument("job_id")
+    rj = sub.add_parser("reject", help="reject a job; the note becomes a learning")
+    rj.add_argument("job_id")
+    rj.add_argument("--note", default="")
+    sub.add_parser("status", help="list jobs and their status")
+    sub.add_parser("summary", help="send the daily summary (Telegram or log)")
     args = p.parse_args(argv)
 
     _setup_logging()
@@ -84,10 +111,33 @@ def main(argv: list[str] | None = None) -> int:
             store = container.store()
             if args.topic:
                 created = store.create_from_topic(args.job_id, args.topic, args.character)
+                container.rights().add(f"orig-{args.job_id}", "original", owner="DesiQuip")
             else:
                 created = store.create(args.job_id, Path(args.template))
             log.info("Created %s", created)
             return 0
+        step_runner = lambda step, job_id: run_step(container, step, job_id)  # noqa: E731
+        if args.cmd == "status":
+            for row in container.jobs().list():
+                print(f"{row['job_id']:<24} {row['status']:<18} retries={row['retries']} "
+                      f"{row['youtube_id'] or ''} {row['error'] or ''}")
+            return 0
+        if args.cmd in ("approve", "reject"):
+            container.approver().decide(args.job_id, args.cmd, getattr(args, "note", ""))
+            container.orchestrator(step_runner).process_approvals()
+            return 0
+        if args.cmd == "approvals":
+            container.orchestrator(step_runner).process_approvals()
+            return 0
+        if args.cmd == "summary":
+            container.orchestrator(step_runner).send_summary()
+            return 0
+        if args.cmd == "produce":
+            container.jobs().create(args.job_id)
+            container.orchestrator(step_runner).produce(args.job_id, args.start)
+            return 0
+        if args.cmd == "run-daily":
+            return run_daily(container, step_runner, args.count)
         if args.cmd == "make":
             start = args.start or ("voice" if container.store().has(args.job_id, "script.json") else "write")
             steps = PIPELINE[PIPELINE.index(start):] + (["upload"] if args.upload else [])

@@ -1,14 +1,8 @@
-"""ScriptWriter adapter: runs the Writer agent (.claude/agents/writer.md) with Claude Code headless."""
+"""ScriptWriter adapter: the Writer agent (.claude/agents/writer.md) via the shared AgentRunner."""
 from __future__ import annotations
 
-import json
-import logging
-import os
-import shutil
-import subprocess
-from pathlib import Path
-
-log = logging.getLogger(__name__)
+from ..ports import AgentRunner
+from .claude_agent import build_agent_cmd
 
 # The Writer may read anything but only write inside jobs/. No shell access.
 ALLOWED_TOOLS = "Read,Glob,Grep,Write(jobs/**),Edit(jobs/**)"
@@ -25,31 +19,12 @@ def build_write_prompt(job_id: str, feedback: list[str]) -> str:
 
 
 def build_write_cmd(claude: str, prompt: str, budget_usd: float) -> list[str]:
-    return [claude, "-p", prompt, "--agent", "writer", "--allowedTools", ALLOWED_TOOLS,
-            "--permission-mode", "acceptEdits", "--output-format", "json",
-            "--max-budget-usd", str(budget_usd)]
+    return build_agent_cmd(claude, "writer", prompt, ALLOWED_TOOLS, budget_usd)
 
 
 class ClaudeCodeWriter:
-    def __init__(self, project_dir: Path, budget_usd: float = 1.0, timeout_s: int = 600) -> None:
-        self.project_dir = Path(project_dir)
-        self.budget_usd, self.timeout_s = budget_usd, timeout_s
-        claude = shutil.which("claude")
-        if not claude:
-            raise RuntimeError("'claude' (Claude Code) not found on PATH. Install it and log in once.")
-        self.claude = claude
-        if os.environ.get("ANTHROPIC_API_KEY"):
-            log.warning("ANTHROPIC_API_KEY is set: this run is billed to the API, not your Claude plan.")
+    def __init__(self, runner: AgentRunner) -> None:
+        self.runner = runner
 
     def write(self, job_id: str, feedback: list[str]) -> None:
-        cmd = build_write_cmd(self.claude, build_write_prompt(job_id, feedback), self.budget_usd)
-        r = subprocess.run(cmd, cwd=self.project_dir, capture_output=True, text=True,
-                           encoding="utf-8", errors="replace", timeout=self.timeout_s)
-        if r.returncode != 0:
-            raise RuntimeError(f"Writer agent failed (exit {r.returncode}): {(r.stderr or r.stdout)[-800:]}")
-        try:
-            result = json.loads(r.stdout)
-            log.info("Writer agent finished in %.0f s, %s turns, cost $%.3f",
-                     result.get("duration_ms", 0) / 1000, result.get("num_turns"), result.get("total_cost_usd", 0))
-        except json.JSONDecodeError:
-            log.info("Writer agent finished")
+        self.runner.run("writer", build_write_prompt(job_id, feedback), ALLOWED_TOOLS)

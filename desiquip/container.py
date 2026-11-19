@@ -76,10 +76,33 @@ class Container:
                            min_scene_s=v["min_scene_s"], max_scene_s=float(w.get("max_scene_s", 4.5)),
                            min_len_s=vid["min_length_s"], max_len_s=vid["max_length_s"])
 
+    def agent_runner(self):
+        from .adapters.claude_agent import ClaudeAgent
+        budget = float(self.cfg.get("agents", {}).get("budget_usd", 1.0))
+        return self._once("agents", lambda: ClaudeAgent(self.root, budget))
+
     def writer(self):
         from .adapters.claude_writer import ClaudeCodeWriter
-        budget = float(self.cfg.get("writer", {}).get("budget_usd", 1.0))
-        return self._once("writer", lambda: ClaudeCodeWriter(self.root, budget))
+        return ClaudeCodeWriter(self.agent_runner())
+
+    def rights(self):
+        from .adapters.rights import SqliteRights
+        return self._once("rights", lambda: SqliteRights(self.root / "data" / "desiquip.db"))
+
+    def reviewer(self):
+        if not self.cfg.get("qa", {}).get("claude_review", True):
+            return None
+        from .adapters.claude_reviewer import ClaudeReviewer
+        return ClaudeReviewer(self.agent_runner(), self.root)
+
+    def qa_service(self):
+        from .domain.qa import QARules
+        from .services.qa import QAService
+        q, vid = self.cfg.get("qa", {}), self.cfg["video"]
+        rules = QARules(min_len_s=vid["min_length_s"], max_len_s=vid["max_length_s"],
+                        width=vid["width"], height=vid["height"], fps=vid["fps"], lufs=vid["loudness_lufs"],
+                        min_humour=int(q.get("min_humour", 7)), min_hook=int(q.get("min_hook", 7)))
+        return QAService(self.media(), self.store(), self.rights(), self.reviewer(), rules)
 
     # --- use cases --------------------------------------------------------
     def write_service(self):
@@ -92,6 +115,18 @@ class Container:
         store = self.store()
         idea = store.read_json(job_id, "idea.json") if store.has(job_id, "idea.json") else {}
         return script_problems(store, job_id, self.script_rules(), idea.get("source_id"))
+
+    def clip_generator(self):
+        models = list(self.cfg.get("clips", {}).get("models") or [])
+        if not models:
+            return None  # free mode: the template animates every scene
+        from .adapters.fal_video import FalVideo
+        return self._once("clips", lambda: FalVideo(models))
+
+    def clip_service(self):
+        from .services.clips import ClipService
+        return ClipService(self.clip_generator(), self.store(),
+                           int(self.cfg.get("clips", {}).get("max_hero", 3)))
 
     def voice_service(self):
         from .services.voice import VoiceService
@@ -106,7 +141,46 @@ class Container:
 
     def render_service(self):
         from .services.render import RenderService
-        return RenderService(self.renderer(), self.store(), self.cfg["video"]["fps"])
+        return RenderService(self.renderer(), self.store(), self.cfg["video"]["fps"], self.root / "characters")
+
+    def jobs(self):
+        from .adapters.jobs_db import SqliteJobs
+        return self._once("jobs", lambda: SqliteJobs(self.root / "data" / "desiquip.db"))
+
+    def approver(self):
+        import os
+        from .adapters.approval import ConsoleApprover, TelegramApprover
+        token, chat = os.environ.get("TG_BOT_TOKEN", "").strip(), os.environ.get("TG_CHAT_ID", "").strip()
+        if token and chat:
+            return self._once("approver", lambda: TelegramApprover(token, chat, self.root / "data" / "telegram_offset"))
+        return self._once("approver", lambda: ConsoleApprover(self.root / "data" / "decisions.json"))
+
+    def flow(self) -> list[str]:
+        return list(self.cfg.get("flow", {}).get("produce") or
+                    ["write", "voice", "clips", "captions", "render", "finalize", "qa", "package"])
+
+    def orchestrator(self, run_step):
+        from .services.orchestrator import Orchestrator
+        return Orchestrator(run_step, self.jobs(), self.approver(), self.store(), self.flow(),
+                            int(self.cfg.get("flow", {}).get("max_retries", 2)), self.root / "growth" / "learnings.md")
+
+    def trend_service(self):
+        import os
+        from .services.trends import TrendService
+        source = None
+        key = os.environ.get("YT_API_KEY", "").strip()
+        if key:
+            from .adapters.youtube_trending import YouTubeTrending
+            source = YouTubeTrending(key)
+        return TrendService(self.agent_runner(), source, self.store(), self.rights(), self.jobs(), self.root,
+                            self.cfg.get("daily", {}).get("character", "uncle_ji"))
+
+    def daily_count(self) -> int:
+        return int(self.cfg.get("daily", {}).get("jobs", 2))
+
+    def package_service(self):
+        from .services.package import PackageService
+        return PackageService(self.agent_runner(), self.renderer(), self.store(), self.root / "characters")
 
     def finalize_service(self):
         from .services.finalize import FinalizeService
