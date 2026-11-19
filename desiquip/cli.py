@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 # CLI step name -> Container service name, in pipeline order.
 STEPS = {"write": "write", "voice": "voice", "clips": "clip", "captions": "caption", "render": "render",
-         "finalize": "finalize", "qa": "qa", "package": "package", "upload": "publish"}
+         "finalize": "finalize", "qa": "qa", "links": "affiliate", "package": "package", "upload": "publish"}
 PIPELINE = ["write", "voice", "clips", "captions", "render", "finalize", "qa", "package"]
 
 
@@ -90,6 +90,7 @@ def main(argv: list[str] | None = None) -> int:
     rj.add_argument("--note", default="")
     sub.add_parser("status", help="list jobs and their status")
     sub.add_parser("summary", help="send the daily summary (Telegram or log)")
+    sub.add_parser("growth", help="09:00 review: analytics, comment replies, learnings, best times")
     args = p.parse_args(argv)
 
     _setup_logging()
@@ -128,6 +129,9 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.cmd == "approvals":
             container.orchestrator(step_runner).process_approvals()
+            return 0
+        if args.cmd == "growth":
+            container.growth_service().run()
             return 0
         if args.cmd == "summary":
             container.orchestrator(step_runner).send_summary()

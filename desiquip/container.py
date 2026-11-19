@@ -187,5 +187,35 @@ class Container:
         return FinalizeService(self.media(), self.store(), self.video_spec())
 
     def publish_service(self):
+        from .adapters.crosspost import from_env
         from .services.publish import PublishService
-        return PublishService(self.uploader(), self.store(), self.cfg["youtube"])
+        return PublishService(self.uploader(), self.store(), self.cfg["youtube"], from_env(), self._publish_at)
+
+    def _publish_at(self):
+        """Next free slot from growth/best-times.json (the Growth agent keeps it updated), in IST."""
+        import json
+        from datetime import datetime, timedelta, timezone
+        from .domain.schedule import next_publish_time
+        ist = timezone(timedelta(hours=5, minutes=30))
+        bt = self.root / "growth" / "best-times.json"
+        slots = json.loads(bt.read_text(encoding="utf-8")).get("slots") if bt.is_file() else None
+        taken = []
+        for up in (self.root / "jobs").glob("*/upload.json"):
+            at = json.loads(up.read_text(encoding="utf-8")).get("publish_at")
+            if at:
+                taken.append(datetime.fromisoformat(at))
+        return next_publish_time(datetime.now(ist), slots or ["18:30", "20:30"], taken)
+
+    def affiliate_service(self):
+        import os
+        from .adapters.affiliate import BitlyShortener
+        from .services.affiliate import AffiliateService
+        bitly = os.environ.get("BITLY_TOKEN", "").strip()
+        return AffiliateService(self.store(), os.environ.get("AMZ_TAG", "").strip(),
+                                BitlyShortener(bitly) if bitly else None, self.root / "data" / "deals.md")
+
+    def growth_service(self):
+        from .adapters.youtube_analytics import YouTubeGrowthAPI
+        from .services.growth import GrowthService
+        return GrowthService(self.agent_runner(), YouTubeGrowthAPI(self.root / "secrets"), self.jobs(), self.root,
+                             int(self.cfg.get("growth", {}).get("max_replies", 20)))

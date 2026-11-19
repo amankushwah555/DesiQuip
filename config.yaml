@@ -34,6 +34,8 @@ youtube:
   default_language: hi
   privacy: private         # stays private until the API compliance audit passes
   ai_disclosure: true
+  schedule: true           # publish at the next free slot in growth/best-times.json
+  playlist_id: ""          # optional series playlist (YouTube playlist ID)
 
 writer:
   chars_per_s: 8.0         # measured Hindi TTS speed; used to estimate length before voicing
@@ -57,9 +59,12 @@ agents:
 
 flow:
   # Step order for each job. Change the pipeline here (no code changes needed).
-  produce: [write, voice, clips, captions, render, finalize, qa, package]
+  produce: [write, voice, clips, captions, render, finalize, qa, links, package]
   max_retries: 2           # spec: QA failure loops back at most 2 times, then the job is rejected
 
 daily:
   jobs: 2                  # spec: 2 Shorts a day
   character: uncle_ji
+
+growth:
+  max_replies: 20          # comment replies posted per day

@@ -6,6 +6,7 @@ test doubles in tests/fakes. container.py picks the adapters from config.yaml.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -37,6 +38,7 @@ class UploadMetadata:
     privacy: str
     made_for_kids: bool
     contains_synthetic_media: bool
+    publish_at: datetime | None = None   # scheduled publish (requires privacy 'private')
 
 
 class ScriptWriter(Protocol):
@@ -74,6 +76,11 @@ class RightsRegistry(Protocol):
 class AgentRunner(Protocol):
     """Runs a Claude Code agent (.claude/agents/<agent>.md) headless with the given tool allow-list."""
     def run(self, agent: str, prompt: str, tools: str) -> dict[str, Any]: ...
+
+
+class CrossPoster(Protocol):
+    name: str
+    def post(self, video: Path, caption: str) -> str: ...
 
 
 class TrendSource(Protocol):
