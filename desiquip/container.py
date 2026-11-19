@@ -69,7 +69,30 @@ class Container:
         from .adapters.youtube import YouTubeUploader
         return self._once("uploader", lambda: YouTubeUploader(self.root / "secrets"))
 
+    def script_rules(self):
+        from .domain.rules import ScriptRules
+        v, w, vid = self.cfg["voice"], self.cfg.get("writer", {}), self.cfg["video"]
+        return ScriptRules(chars_per_s=float(w.get("chars_per_s", 8.0)), gap_s=v["scene_gap_s"],
+                           min_scene_s=v["min_scene_s"], max_scene_s=float(w.get("max_scene_s", 4.5)),
+                           min_len_s=vid["min_length_s"], max_len_s=vid["max_length_s"])
+
+    def writer(self):
+        from .adapters.claude_writer import ClaudeCodeWriter
+        budget = float(self.cfg.get("writer", {}).get("budget_usd", 1.0))
+        return self._once("writer", lambda: ClaudeCodeWriter(self.root, budget))
+
     # --- use cases --------------------------------------------------------
+    def write_service(self):
+        from .services.write import WriteService
+        retries = int(self.cfg.get("writer", {}).get("retries", 1))
+        return WriteService(self.writer(), self.store(), self.script_rules(), retries)
+
+    def validate_job(self, job_id: str) -> list[str]:
+        from .services.write import script_problems
+        store = self.store()
+        idea = store.read_json(job_id, "idea.json") if store.has(job_id, "idea.json") else {}
+        return script_problems(store, job_id, self.script_rules(), idea.get("source_id"))
+
     def voice_service(self):
         from .services.voice import VoiceService
         v = self.cfg["voice"]

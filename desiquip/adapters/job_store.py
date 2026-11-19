@@ -27,6 +27,19 @@ class FileJobStore:
         shutil.copytree(template, dest)
         return dest
 
+    def create_from_topic(self, job_id: str, topic: str, character: str = "uncle_ji") -> Path:
+        """New job from just an idea. Hand-given topics are originals (spec content model 1)."""
+        dest = self.root / job_id
+        if dest.exists():
+            raise FileExistsError(f"Job already exists: {dest}")
+        dest.mkdir(parents=True)
+        self.write_json(job_id, "idea.json", {"topic": topic, "character": character,
+                                              "source_id": f"orig-{job_id}", "source_type": "original"})
+        return dest
+
+    def has(self, job_id: str, name: str) -> bool:
+        return (self.root / job_id / name).is_file()
+
     def read_json(self, job_id: str, name: str) -> Any:
         with open(self.path(job_id) / name, encoding="utf-8") as f:
             return json.load(f)

@@ -1,8 +1,11 @@
 """Command line entry point.
 
+    python -m desiquip new <job_id> --topic "..."     # start from an idea (Writer agent writes the script)
+    python -m desiquip new <job_id> [--from DIR]      # start from a ready script (default: examples/demo-001)
     python -m desiquip make <job_id> [--upload] [--from STEP]
-    python -m desiquip voice|captions|render|finalize|upload <job_id>
-    python -m desiquip auth           # one-time YouTube OAuth
+    python -m desiquip write|voice|captions|render|finalize|upload <job_id>
+    python -m desiquip validate <job_id>              # check script.json against the spec rules
+    python -m desiquip auth                           # one-time YouTube OAuth
 """
 from __future__ import annotations
 
@@ -15,9 +18,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 # CLI step name -> Container service name, in pipeline order.
-STEPS = {"voice": "voice", "captions": "caption", "render": "render",
+STEPS = {"write": "write", "voice": "voice", "captions": "caption", "render": "render",
          "finalize": "finalize", "upload": "publish"}
-WEEK1 = ["voice", "captions", "render", "finalize"]
+PIPELINE = ["write", "voice", "captions", "render", "finalize"]
 
 
 def make_container():
@@ -45,16 +48,21 @@ def run_step(container, step: str, job_id: str):
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="desiquip", description="DesiQuip Shorts pipeline")
     sub = p.add_subparsers(dest="cmd", required=True)
-    mk = sub.add_parser("make", help="run voice -> captions -> render -> finalize")
+    mk = sub.add_parser("make", help="run write -> voice -> captions -> render -> finalize")
     mk.add_argument("job_id")
     mk.add_argument("--upload", action="store_true", help="also upload (private) at the end")
-    mk.add_argument("--from", dest="start", choices=WEEK1, default="voice", help="resume from a step")
+    mk.add_argument("--from", dest="start", choices=PIPELINE, default=None,
+                    help="resume from a step (default: write if there is no script yet, else voice)")
     for step in STEPS:
         sub.add_parser(step).add_argument("job_id")
+    sub.add_parser("validate", help="check script.json against the spec rules").add_argument("job_id")
     sub.add_parser("auth", help="one-time YouTube OAuth; saves secrets/token.json")
-    nw = sub.add_parser("new", help="create jobs/<job_id>/ from a template folder")
+    nw = sub.add_parser("new", help="create jobs/<job_id>/ from a topic or a template folder")
     nw.add_argument("job_id")
-    nw.add_argument("--from", dest="template", default=str(ROOT / "examples" / "demo-001"))
+    src = nw.add_mutually_exclusive_group()
+    src.add_argument("--topic", help="idea for the Writer agent, e.g. \"बिजली का बिल\"")
+    src.add_argument("--from", dest="template", default=str(ROOT / "examples" / "demo-001"))
+    nw.add_argument("--character", default="uncle_ji")
     args = p.parse_args(argv)
 
     _setup_logging()
@@ -66,11 +74,23 @@ def main(argv: list[str] | None = None) -> int:
             log.info("YouTube authorised; token saved to secrets/token.json")
             return 0
         container = make_container()
+        if args.cmd == "validate":
+            problems = container.validate_job(args.job_id)
+            for problem in problems:
+                print(f"- {problem}")
+            print("OK: script follows the spec rules" if not problems else f"{len(problems)} problem(s)")
+            return 1 if problems else 0
         if args.cmd == "new":
-            log.info("Created %s", container.store().create(args.job_id, Path(args.template)))
+            store = container.store()
+            if args.topic:
+                created = store.create_from_topic(args.job_id, args.topic, args.character)
+            else:
+                created = store.create(args.job_id, Path(args.template))
+            log.info("Created %s", created)
             return 0
         if args.cmd == "make":
-            steps = WEEK1[WEEK1.index(args.start):] + (["upload"] if args.upload else [])
+            start = args.start or ("voice" if container.store().has(args.job_id, "script.json") else "write")
+            steps = PIPELINE[PIPELINE.index(start):] + (["upload"] if args.upload else [])
         else:
             steps = [args.cmd]
         for step in steps:

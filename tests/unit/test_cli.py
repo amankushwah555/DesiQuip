@@ -7,8 +7,17 @@ from desiquip.adapters.ffmpeg import choose_encoder
 class Recorder:
     """Stands in for the Container: every *_service() returns an object whose run() is recorded."""
 
-    def __init__(self):
+    def __init__(self, has_script=True):
         self.calls = []
+        self.has_script = has_script
+
+    def store(self):
+        rec = self
+
+        class S:
+            def has(self, job_id, name):
+                return rec.has_script
+        return S()
 
     def __getattr__(self, name):
         if not name.endswith("_service"):
@@ -32,6 +41,22 @@ def rec(monkeypatch):
 def test_make_runs_week1_steps_in_order_without_upload(rec):
     assert cli.main(["make", "job1"]) == 0
     assert rec.calls == [("voice", "job1"), ("caption", "job1"), ("render", "job1"), ("finalize", "job1")]
+
+
+def test_make_starts_with_the_writer_when_there_is_no_script(monkeypatch):
+    r = Recorder(has_script=False)
+    monkeypatch.setattr(cli, "make_container", lambda: r)
+    cli.main(["make", "job1"])
+    assert [s for s, _ in r.calls] == ["write", "voice", "caption", "render", "finalize"]
+
+
+def test_validate_returns_nonzero_on_problems(monkeypatch, capsys):
+    class C:
+        def validate_job(self, job_id):
+            return ["loop_end must be true"]
+    monkeypatch.setattr(cli, "make_container", lambda: C())
+    assert cli.main(["validate", "job1"]) == 1
+    assert "loop_end" in capsys.readouterr().out
 
 
 def test_make_with_upload_publishes_last(rec):

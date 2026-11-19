@@ -39,6 +39,11 @@ class UploadMetadata:
     contains_synthetic_media: bool
 
 
+class ScriptWriter(Protocol):
+    """Writes jobs/<id>/script.json from jobs/<id>/idea.json; feedback = problems with the last attempt."""
+    def write(self, job_id: str, feedback: list[str]) -> None: ...
+
+
 class TextToSpeech(Protocol):
     def synthesize(self, text: str, character: str, out: Path) -> None: ...
 

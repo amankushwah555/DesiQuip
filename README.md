@@ -22,7 +22,20 @@ powershell -ExecutionPolicy Bypass -File .\setup.ps1
 - Creates `.venv`, installs Remotion and creates `.env`.
 - Runs the test suite.
 
-## Make a Short
+## Make a Short from just an idea (Writer agent)
+
+```powershell
+.\.venv\Scripts\python -m desiquip new w-001 --topic "अंकल जी और फैमिली व्हाट्सएप ग्रुप"
+.\.venv\Scripts\python -m desiquip make w-001               # Claude writes the script, then voice -> video
+.\.venv\Scripts\python -m desiquip validate w-001           # check a script against the spec rules
+```
+
+The Writer agent (`.claude/agents/writer.md`) runs headless on your Claude Code login. It reads the idea, the
+character sheet (`characters/`) and the hook guide (`growth/`), then writes `script.json`. Code checks the
+script against the spec rules (30–45 s, a visual change every 4 s, a 2 s hook, 3 titles, a loop ending) and
+sends it back once with the list of problems if anything fails.
+
+## Make a Short from a ready script
 
 ```powershell
 .\.venv\Scripts\python -m desiquip new demo-001             # creates jobs\demo-001 from examples\demo-001
