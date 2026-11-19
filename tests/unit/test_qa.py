@@ -97,6 +97,21 @@ class TestQAService:
             QAService(FakeMediaQA(loud), store, rights, FakeReviewer(GOOD_REVIEW), RULES).run(job)
         assert e.value.kind == "technical" and "loudness" in str(e.value)
 
+    def test_too_long_is_a_content_problem(self, store, qa_job):
+        # Found in a real run: a 45.1 s video was re-rendered twice, but only a rewrite can shorten it.
+        job, rights = qa_job
+        long = MediaInfo(**{**GOOD.__dict__, "duration_s": 45.1})
+        with pytest.raises(QAFailed) as e:
+            QAService(FakeMediaQA(long), store, rights, FakeReviewer(GOOD_REVIEW), RULES).run(job)
+        assert e.value.kind == "content"
+
+    def test_content_wins_over_technical_when_both_fail(self, store, qa_job):
+        job, rights = qa_job
+        loud = MediaInfo(**{**GOOD.__dict__, "lufs": -9.0})
+        with pytest.raises(QAFailed) as e:
+            QAService(FakeMediaQA(loud), store, rights, FakeReviewer({**GOOD_REVIEW, "humour": 4}), RULES).run(job)
+        assert e.value.kind == "content"   # a rewrite re-runs every later step anyway
+
     def test_unknown_source_fails_rights(self, store, qa_job, tmp_path):
         job, _ = qa_job
         empty = SqliteRights(tmp_path / "other.sqlite")

@@ -1,6 +1,6 @@
 ---
 name: writer
-description: DesiQuip Writer. Turns one comedy idea (jobs/<id>/idea.json) into a 30-45 second Hindi YouTube Short script (jobs/<id>/script.json). Use for any "write the script for job X" request.
+description: DesiQuip Writer. Turns one comedy idea (jobs/<id>/idea.json) into a 30-42 second Hindi YouTube Short script (jobs/<id>/script.json). Use for any "write the script for job X" request.
 tools: Read, Glob, Grep, Write, Edit
 ---
 
@@ -31,7 +31,7 @@ rejects it if any rule below is broken, so follow the rules precisely.
 | Rule | Limit |
 | --- | --- |
 | Speech per scene | **at most 34 characters** of `line` (about 4 s; a visual change every 4 s) |
-| Total length | **30-45 s**: about **8-11 scenes** of 22-34 characters each |
+| Total length | **30-42 s** estimated (the real voice runs a little longer; QA rejects anything over 45 s): about **8-10 scenes** of 22-34 characters each |
 | `hook.until_s` | 2 or less |
 | `title_options` | **exactly 3**, each **under 50 characters**, curiosity-driven, may mix Hindi and English |
 | `loop_end` | `true` |

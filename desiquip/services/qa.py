@@ -10,6 +10,7 @@ from ..ports import JobStore, QAMedia, Reviewer, RightsRegistry
 
 log = logging.getLogger(__name__)
 FRAME_TIMES = [0.0, 1.0, 2.5]  # spec: Claude watches frames from the first 3 seconds
+CONTENT_CHECKS = ("length", "products")  # measurable failures only the Writer can fix
 
 
 class QAFailed(RuntimeError):
@@ -54,6 +55,12 @@ class QAService:
         if passed:
             log.info("QA passed%s", f" (hook {review['hook']}, humour {review['humour']})" if review else "")
             return jd / "qa.json"
-        rights_failed = any(r.startswith("rights") for r in failed)
-        kind = "rights" if rights_failed else "technical" if failed else "content"
+        # Which fix can work: rights -> reject; length or anything subjective -> rewrite the script
+        # (a rewrite re-runs every later step too); otherwise -> re-render.
+        if any(r.startswith("rights") for r in failed):
+            kind = "rights"
+        elif content_failed or any(r.startswith(CONTENT_CHECKS) for r in failed):
+            kind = "content"
+        else:
+            kind = "technical"
         raise QAFailed(kind, failed + content_failed)

@@ -64,6 +64,10 @@ class RemotionRenderer:
         props_file.parent.mkdir(exist_ok=True)
         props_file.write_text(json.dumps(staged, ensure_ascii=False), encoding="utf-8")
         try:
-            subprocess.run(make_cmd(props_file.resolve()), cwd=self.project_dir, check=True)
+            # Capture Remotion's per-frame progress so it doesn't flood the logs; show it only on failure.
+            r = subprocess.run(make_cmd(props_file.resolve()), cwd=self.project_dir, capture_output=True,
+                               text=True, encoding="utf-8", errors="replace")
+            if r.returncode != 0:
+                raise RuntimeError(f"Remotion failed (exit {r.returncode}): {(r.stderr or r.stdout)[-1500:]}")
         finally:
             shutil.rmtree(self.project_dir / "public" / "jobs" / job_id, ignore_errors=True)

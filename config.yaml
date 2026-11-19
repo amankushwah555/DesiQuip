@@ -40,6 +40,7 @@ youtube:
 writer:
   chars_per_s: 8.0         # measured Hindi TTS speed; used to estimate length before voicing
   max_scene_s: 4.5         # spec: visual change every 3-4 s
+  target_max_s: 42         # Writer aims below the 45 s QA limit (real voice runs ~5% longer than the estimate)
   retries: 1               # spec: invalid output = retry once, then fail
   budget_usd: 1.0          # cap per Writer run (applies to API billing)
 

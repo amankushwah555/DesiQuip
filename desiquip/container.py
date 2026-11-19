@@ -74,7 +74,9 @@ class Container:
         v, w, vid = self.cfg["voice"], self.cfg.get("writer", {}), self.cfg["video"]
         return ScriptRules(chars_per_s=float(w.get("chars_per_s", 8.0)), gap_s=v["scene_gap_s"],
                            min_scene_s=v["min_scene_s"], max_scene_s=float(w.get("max_scene_s", 4.5)),
-                           min_len_s=vid["min_length_s"], max_len_s=vid["max_length_s"])
+                           min_len_s=vid["min_length_s"],
+                           # Writer aims below the QA limit: real voice runs a little longer than the estimate.
+                           max_len_s=float(w.get("target_max_s", vid["max_length_s"])))
 
     def agent_runner(self):
         from .adapters.claude_agent import ClaudeAgent
