@@ -1,6 +1,7 @@
 import React from "react";
 import { Composition, Still } from "remotion";
 import { Thumbnail, type ThumbnailProps } from "./Thumbnail";
+import { UncleJi } from "./CharacterArt";
 import { Short } from "./Short";
 import type { ShortProps } from "./types";
 
@@ -27,6 +28,7 @@ const preview: ShortProps = {
 
 export const RemotionRoot: React.FC = () => (
   <>
+  <Still id="UncleJi" component={UncleJi} width={900} height={1300} />
   <Still
     id="Thumbnail"
     component={Thumbnail}
