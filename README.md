@@ -76,5 +76,7 @@ The GPU laptop should be much faster (Whisper large-v3 on CUDA and NVENC encodin
 | `examples/` | sample jobs |
 | `tests/` | unit tests and test doubles |
 | `references/` | spec PDF and diagrams |
+| `reports/` | research reports (Markdown + Word), e.g. the API keys and costs guide |
+| `research_notes/` | sourced notes behind each report |
 
 `CLAUDE.md` holds the rules every agent follows.

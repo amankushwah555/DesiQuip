@@ -10,9 +10,13 @@ from ..ports import UploadMetadata
 
 log = logging.getLogger(__name__)
 
+# Desktop (installed-app) OAuth can't add scopes incrementally, so everything the pipeline
+# will ever need is requested at the first login.
 SCOPES = [
     "https://www.googleapis.com/auth/youtube.upload",
-    "https://www.googleapis.com/auth/youtube",  # thumbnails + playlists (week 4)
+    "https://www.googleapis.com/auth/youtube",              # playlists (week 4)
+    "https://www.googleapis.com/auth/youtube.force-ssl",    # comments, pinned comment, thumbnails (week 4)
+    "https://www.googleapis.com/auth/yt-analytics.readonly",  # Growth agent metrics (week 4)
 ]
 RETRIABLE_STATUS = {500, 502, 503, 504}
 

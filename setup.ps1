@@ -29,6 +29,16 @@ else { Ok "$freeGB GB free on $($drive.Name):" }
 $cFree = [math]::Round((Get-PSDrive C).Free / 1GB)
 if ($cFree -lt 10) { Warn "Only $cFree GB free on C: - npm/pip caches and the Chrome render engine live there." }
 
+Step "Checking path length (Windows 260-character limit)"
+# Deepest dependency file is ~145 chars below the repo root (.venv\Lib\site-packages\...).
+$longPaths = (Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -ErrorAction SilentlyContinue).LongPathsEnabled -eq 1
+if (-not $longPaths -and ($Root.Length + 150) -gt 259) {
+    throw ("Repo path is too long ($($Root.Length) chars) for Windows' 260-char limit. Either clone to a short " +
+           "folder such as C:\dev\DesiQuip, or enable long paths (admin PowerShell): " +
+           "Set-ItemProperty HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem LongPathsEnabled 1")
+}
+Ok "Repo path is $($Root.Length) chars$(if ($longPaths) { ' (long paths enabled)' })"
+
 Step "System tools (Python 3.13, Node.js 22 LTS, FFmpeg, Git)"
 if (-not (Has winget)) { throw "winget not found. Install 'App Installer' from the Microsoft Store, then re-run." }
 $py = Get-Command py -ErrorAction SilentlyContinue

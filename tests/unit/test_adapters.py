@@ -86,6 +86,15 @@ class TestYouTube:
                                   "containsSyntheticMedia": True}
 
 
+class TestYouTubeScopes:
+    def test_all_scopes_requested_up_front(self):
+        # Desktop OAuth clients can't add scopes later, so request Analytics (week 4 Growth agent) now.
+        from desiquip.adapters.youtube import SCOPES
+        assert "https://www.googleapis.com/auth/youtube.upload" in SCOPES
+        assert "https://www.googleapis.com/auth/yt-analytics.readonly" in SCOPES
+        assert "https://www.googleapis.com/auth/youtube.force-ssl" in SCOPES  # comments + thumbnails
+
+
 class TestRemotion:
     def test_stage_copies_assets_and_namespaces_props(self, tmp_path):
         src = tmp_path / "job"
@@ -119,6 +128,43 @@ class TestTTSConfig:
     def test_unknown_character_is_a_clear_error(self):
         with pytest.raises(KeyError, match="bua_ji"):
             voice_for(self.CHARS, "bua_ji", "edge_voice")
+
+
+class TestElevenLabsHTTP:
+    """ElevenLabs over plain HTTPS (no SDK: its deep package paths break pip on Windows' 260-char limit)."""
+
+    class Resp:
+        status_code = 200
+        content = b"mp3-bytes"
+        text = ""
+
+        def raise_for_status(self):
+            pass
+
+    def test_posts_text_with_voice_and_key(self, tmp_path, monkeypatch):
+        from desiquip.adapters.tts import ElevenLabsTTS
+        monkeypatch.setenv("ELEVENLABS_API_KEY", "k123")
+        monkeypatch.setenv("VOICE_ID_UNCLE_JI", "v456")
+        calls = []
+        tts = ElevenLabsTTS(TestTTSConfig.CHARS, post=lambda url, **kw: calls.append((url, kw)) or self.Resp())
+        out = tmp_path / "a.mp3"
+        tts.synthesize("नमस्ते", "uncle_ji", out)
+        url, kw = calls[0]
+        assert url == "https://api.elevenlabs.io/v1/text-to-speech/v456?output_format=mp3_44100_128"
+        assert kw["headers"]["xi-api-key"] == "k123"
+        assert kw["json"] == {"text": "नमस्ते", "model_id": "eleven_multilingual_v2"}
+        assert out.read_bytes() == b"mp3-bytes"
+
+    def test_missing_key_is_a_clear_error(self, tmp_path, monkeypatch):
+        from desiquip.adapters.tts import ElevenLabsTTS
+        monkeypatch.delenv("ELEVENLABS_API_KEY", raising=False)
+        with pytest.raises(RuntimeError, match="ELEVENLABS_API_KEY"):
+            ElevenLabsTTS(TestTTSConfig.CHARS, post=lambda *a, **k: None).synthesize("x", "uncle_ji", tmp_path / "a.mp3")
+
+
+def test_no_sdk_with_overlong_paths_in_requirements():
+    reqs = (Path(__file__).resolve().parents[2] / "requirements.txt").read_text()
+    assert "elevenlabs" not in reqs
 
 
 class TestContainer:

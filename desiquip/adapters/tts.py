@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 
 def voice_for(characters: dict[str, Any], character: str, key: str) -> str:
@@ -26,21 +26,27 @@ class EdgeTTS:
 
 
 class ElevenLabsTTS:
-    MODEL = "eleven_multilingual_v2"
+    """Plain HTTPS client: one endpoint, no SDK (the SDK's deep file paths break pip on Windows)."""
 
-    def __init__(self, characters: dict[str, Any]) -> None:
+    MODEL = "eleven_multilingual_v2"
+    URL = "https://api.elevenlabs.io/v1/text-to-speech/{voice_id}?output_format=mp3_44100_128"
+
+    def __init__(self, characters: dict[str, Any], post: Callable[..., Any] | None = None) -> None:
         self.characters = characters
+        self._post = post
 
     def synthesize(self, text: str, character: str, out: Path) -> None:
-        from elevenlabs.client import ElevenLabs
-
         env_name = voice_for(self.characters, character, "elevenlabs_voice_env")
         voice_id = os.environ.get(env_name, "").strip()
         api_key = os.environ.get("ELEVENLABS_API_KEY", "").strip()
         if not voice_id or not api_key:
             raise RuntimeError(f"Set ELEVENLABS_API_KEY and {env_name} in .env")
-        audio = ElevenLabs(api_key=api_key).text_to_speech.convert(
-            voice_id=voice_id, text=text, model_id=self.MODEL, output_format="mp3_44100_128")
-        with open(out, "wb") as f:
-            for chunk in audio:
-                f.write(chunk)
+        post = self._post
+        if post is None:
+            import requests
+            post = requests.post
+        resp = post(self.URL.format(voice_id=voice_id), timeout=120,
+                    headers={"xi-api-key": api_key, "accept": "audio/mpeg"},
+                    json={"text": text, "model_id": self.MODEL})
+        resp.raise_for_status()
+        out.write_bytes(resp.content)
