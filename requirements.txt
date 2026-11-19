@@ -1,0 +1,11 @@
+python-dotenv>=1.0
+pyyaml>=6.0
+requests>=2.31
+edge-tts>=7.0
+elevenlabs>=1.0
+faster-whisper>=1.1
+av==18.1.0  # PyAV 19 removed metadata_errors, which faster-whisper 1.2.1 passes
+google-api-python-client>=2.100
+google-auth-oauthlib>=1.2
+pillow>=10.0
+pytest>=8.0

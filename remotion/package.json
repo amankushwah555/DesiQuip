@@ -1,0 +1,21 @@
+{
+  "name": "desiquip-remotion",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Shorts template: word-synced Hindi captions, zoom punches, hook text, AI tag, loop end",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.545",
+    "@remotion/google-fonts": "4.0.545",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.545"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.12",
+    "typescript": "5.6.3"
+  }
+}

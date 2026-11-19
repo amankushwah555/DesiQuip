@@ -1,0 +1,36 @@
+# Every swappable model or engine is one value here (spec: "any model can be swapped by changing one config value").
+
+video:
+  width: 1080
+  height: 1920
+  fps: 30
+  min_length_s: 30
+  max_length_s: 45
+  # auto = NVENC on the GPU laptop, x264 elsewhere | libx264 | h264_nvenc
+  encoder: auto
+  loudness_lufs: -14
+  render_concurrency: "100%"   # Remotion: frames rendered in parallel (CPU threads)
+
+voice:
+  # edge (free, budget) or elevenlabs (production)
+  engine: edge
+  scene_gap_s: 0.25        # silence between scene lines
+  min_scene_s: 2.0         # a scene never lasts less than this
+  workers: 4               # scenes synthesised in parallel
+
+captions:
+  model: large-v3          # faster-whisper model; use "small" on CPU
+  language: hi
+  device: auto             # auto | cuda | cpu
+  words_per_group: 3       # words shown on screen at once
+
+characters:
+  uncle_ji:
+    edge_voice: hi-IN-MadhurNeural
+    elevenlabs_voice_env: VOICE_ID_UNCLE_JI
+
+youtube:
+  category_id: "23"        # Comedy
+  default_language: hi
+  privacy: private         # stays private until the API compliance audit passes
+  ai_disclosure: true
