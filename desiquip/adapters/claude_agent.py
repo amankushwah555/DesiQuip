@@ -27,6 +27,11 @@ def parse_result(stdout: str) -> dict[str, Any]:
         return {"result": stdout}
 
 
+def summarize(result: dict[str, Any]) -> str:
+    secs = (result.get("duration_api_ms") or result.get("duration_ms") or 0) / 1000
+    return f"{secs:.1f} s, ${result.get('total_cost_usd') or 0:.3f}"
+
+
 def build_agent_cmd(claude: str, agent: str, prompt: str, tools: str, budget_usd: float) -> list[str]:
     return [claude, "-p", prompt, "--agent", agent, "--allowedTools", tools,
             "--permission-mode", "acceptEdits", "--output-format", "json",
@@ -51,6 +56,7 @@ class ClaudeAgent:
         if r.returncode != 0:
             raise RuntimeError(f"Agent '{agent}' failed (exit {r.returncode}): {(r.stderr or r.stdout)[-800:]}")
         result = parse_result(r.stdout)
-        log.info("Agent %s finished in %.0f s, %s turns, cost $%.3f", agent, result.get("duration_ms", 0) / 1000,
-                 result.get("num_turns"), result.get("total_cost_usd", 0) or 0)
+        if result.get("is_error"):
+            raise RuntimeError(f"Agent '{agent}' reported an error: {str(result.get('result'))[:500]}")
+        log.info("Agent %s finished (%s)", agent, summarize(result))
         return result

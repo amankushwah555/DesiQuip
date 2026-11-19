@@ -28,6 +28,7 @@ class PackageService:
             prompt = f"Package job {job_id}. Read jobs/{job_id}/script.json and write jobs/{job_id}/package.json."
             if feedback:
                 prompt += "\n\nYour previous package.json was rejected. Fix:\n" + "\n".join(f"- {p}" for p in feedback)
+            (jd / "package.json").unlink(missing_ok=True)    # never mistake an earlier file for this run's output
             self.runner.run("packager", prompt, TOOLS)
             try:
                 pkg = json.loads((jd / "package.json").read_text(encoding="utf-8"))

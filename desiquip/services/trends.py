@@ -66,6 +66,7 @@ class TrendService:
                            "\n".join(f"- {t}" for t in recent))
             if feedback:
                 prompt += "\n\nYour previous file was rejected. Fix:\n" + "\n".join(f"- {p}" for p in feedback)
+            (self.root / ideas_rel).unlink(missing_ok=True)   # never mistake an earlier file for this run's output
             self.runner.run("trend-finder", prompt, TOOLS)
             try:
                 ideas = json.loads((self.root / ideas_rel).read_text(encoding="utf-8"))["ideas"]

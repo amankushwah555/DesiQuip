@@ -64,6 +64,15 @@ class TestPackageService:
         assert stills.calls == GOOD["thumbnail_texts"]
         assert all((store.path(job) / f"thumb_{i}.png").is_file() for i in (1, 2, 3))
 
+    def test_stale_package_is_never_reused(self, store, job):
+        (store.path(job) / "package.json").write_text(json.dumps(GOOD, ensure_ascii=False), encoding="utf-8")
+
+        class SilentAgent:
+            def run(self, agent, prompt, tools):
+                return {}
+        with pytest.raises(RuntimeError, match="missing"):
+            PackageService(SilentAgent(), FakeStills(), store).run(job)
+
     def test_invalid_package_is_rejected_after_retry(self, store, job):
         bad = {**GOOD, "title": "x" * 80}
         runner = FakePackager(store, bad)

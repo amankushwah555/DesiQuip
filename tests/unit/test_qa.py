@@ -149,6 +149,11 @@ def test_parse_media_info_and_loudness():
     assert info == MediaInfo(1080, 1920, 30.0, 41.1, "h264", "aac", -14.0)
 
 
+def test_agent_summary_uses_fields_claude_actually_returns():
+    from desiquip.adapters.claude_agent import summarize
+    assert summarize({"duration_api_ms": 35910, "total_cost_usd": 0.2068}) == "35.9 s, $0.207"
+
+
 def test_agent_result_is_parsed_even_with_noise_around_the_json():
     from desiquip.adapters.claude_agent import parse_result
     out = 'warning: something\n{"type":"result","duration_ms":46000,"num_turns":6,"total_cost_usd":0.2}\n'

@@ -72,6 +72,20 @@ class TestTrendService:
         s.run(count=1)
         assert "अंकल जी और ऑनलाइन क्लास" in agent.prompts[-1] and "do not repeat" in agent.prompts[-1].lower()
 
+    def test_stale_ideas_file_is_never_reused(self, env):
+        # Found in a real run: the agent wrote nothing, and an earlier ideas file was read as new.
+        root, store, jobs, rights = env
+        stale = root / "data" / "trends" / "2026-11-20-ideas.json"
+        stale.parent.mkdir(parents=True)
+        stale.write_text(json.dumps({"ideas": [IDEA]}, ensure_ascii=False), encoding="utf-8")
+
+        class SilentAgent:
+            def run(self, agent, prompt, tools):
+                return {}
+        s = TrendService(SilentAgent(), None, store, rights, jobs, root, today=lambda: "2026-11-20")
+        with pytest.raises(RuntimeError, match="missing"):
+            s.run(count=1)
+
     def test_works_without_youtube_key(self, env):
         s, _ = svc(env, [IDEA], source=None)
         assert s.run(count=1) == ["2026-11-20-01"]
